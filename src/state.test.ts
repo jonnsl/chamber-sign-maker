@@ -16,6 +16,7 @@ import {
 
 describe('padChamber', () => {
   it('zero-pads to two digits', () => {
+    expect(padChamber(0)).toBe('00')
     expect(padChamber(1)).toBe('01')
     expect(padChamber(4)).toBe('04')
     expect(padChamber(19)).toBe('19')
@@ -57,9 +58,20 @@ describe('validateChambers', () => {
     }
   })
 
-  it('requires positive integers below 99', () => {
+  it('allows chamber 00 but requires a total of at least 01', () => {
+    expect(validateChambers('00', '19')).toEqual({
+      ok: true,
+      current: 0,
+      total: 19,
+    })
+    expect(validateChambers('0', '0')).toEqual({
+      ok: false,
+      errors: { total: expect.stringMatching(/from 01 to 98/) },
+    })
+  })
+
+  it('requires whole numbers below 99', () => {
     for (const [c, t] of [
-      ['0', '19'],
       ['00', '00'],
       ['4', '99'],
       ['x', '19'],
@@ -153,6 +165,12 @@ describe('URL hash serialization', () => {
   it('produces a readable, zero-padded hash', () => {
     const hash = serializeState(state)
     expect(hash).toMatch(/^v=1&n=04&t=19&s=cube-dispenser,~cube-hazard,_,/)
+  })
+
+  it('round-trips chamber 00', () => {
+    const zero = { ...state, current: 0 }
+    expect(serializeState(zero)).toContain('n=00&')
+    expect(parseState(serializeState(zero))).toEqual(zero)
   })
 
   it('round-trips', () => {

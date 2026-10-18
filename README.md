@@ -17,8 +17,9 @@ only the coordinates of each element inside the texture.
 
 ## Features
 
-- Chamber number and total (`04 / 19`), validated (positive integers below
-  99, current ≤ total) and zero-padded to two digits.
+- Chamber number and total (`04 / 19`) as number inputs, validated
+  (chamber 00–98, total 01–98, chamber ≤ total) and zero-padded to two
+  digits.
 - Ten icon slots (two rows of five). Each holds any icon, or nothing, and can
   be switched between **active** (lit) and **inactive** (dimmed to 25%
   opacity, or optionally drawn with the game's own unlit texture).
@@ -225,9 +226,9 @@ Tests mock the canvas and textures, so CI never needs the game files.
 - **Icon order and names** follow the community names for the ten
   Portal 1 icons. The texture packs them as 4 + 3 + 3; slots default to the
   in-game order (cube dispenser … cake).
-- **Number range** follows the spec: 01–98 (positive, below 99). Portal's
-  first chamber is `00`. To allow it (or `99`), change `MIN_CHAMBER` /
-  `MAX_CHAMBER` in `src/state.ts`.
+- **Number range:** the chamber number may be `00` (Portal's first
+  chamber) up to `98`; the total must be `01`–`98`. Limits are
+  `MIN_CHAMBER`, `MIN_TOTAL` and `MAX_CHAMBER` in `src/state.ts`.
 
 ## License
 

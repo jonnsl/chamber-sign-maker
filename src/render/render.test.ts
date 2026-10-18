@@ -34,6 +34,17 @@ describe('layoutSign', () => {
     expect(ticks.filter((t) => t.lit)).toHaveLength(7)
   })
 
+  it('renders chamber 00 with the sideways big zero and no lit ticks', () => {
+    const { ops } = layoutSign({ ...DEFAULT_STATE, current: 0, total: 19 })
+    const regions = regionOps(ops)
+    expect(regions.slice(0, 2).map((op) => op.region)).toEqual([
+      atlas.bigDigits[0],
+      atlas.bigDigits[0],
+    ])
+    const ticks = regions.filter((op) => op.region === atlas.progressTick)
+    expect(ticks.filter((t) => t.lit)).toHaveLength(0)
+  })
+
   it('keeps every element inside the sign, even with 98 chambers', () => {
     const layout = layoutSign({ ...DEFAULT_STATE, current: 98, total: 98 })
     for (const op of layout.ops) {

@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import {
   MAX_CHAMBER,
   MIN_CHAMBER,
+  MIN_TOTAL,
   padChamber,
   parseChamberInput,
   validateChambers,
@@ -57,7 +58,7 @@ export function ChamberFields({ current, total, onChange }: Props) {
     }
   }
 
-  const field = (key: 'current' | 'total', label: string) => {
+  const field = (key: 'current' | 'total', label: string, min: number) => {
     const inputId = `${id}-${key}`
     const error = errors[key]
     return (
@@ -65,10 +66,11 @@ export function ChamberFields({ current, total, onChange }: Props) {
         <label htmlFor={inputId}>{label}</label>
         <input
           id={inputId}
-          type="text"
-          inputMode="numeric"
+          type="number"
+          min={min}
+          max={MAX_CHAMBER}
+          step={1}
           autoComplete="off"
-          maxLength={2}
           value={draft[key]}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${inputId}-error` : `${id}-hint`}
@@ -88,14 +90,15 @@ export function ChamberFields({ current, total, onChange }: Props) {
     <fieldset className="chambers">
       <legend>Chamber</legend>
       <div className="chambers-row">
-        {field('current', 'Chamber number')}
+        {field('current', 'Chamber number', MIN_CHAMBER)}
         <span className="chambers-sep" aria-hidden="true">
           /
         </span>
-        {field('total', 'Total chambers')}
+        {field('total', 'Total chambers', MIN_TOTAL)}
       </div>
       <p id={`${id}-hint`} className="hint">
-        {padChamber(MIN_CHAMBER)}–{MAX_CHAMBER}, shown as{' '}
+        Chamber {padChamber(MIN_CHAMBER)}–{MAX_CHAMBER}, total{' '}
+        {padChamber(MIN_TOTAL)}–{MAX_CHAMBER}; shown as{' '}
         <output>
           {validation.ok
             ? `${padChamber(validation.current)} / ${padChamber(validation.total)}`

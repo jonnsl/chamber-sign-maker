@@ -89,6 +89,7 @@ select {
 button,
 select,
 input[type='text'],
+input[type='number'],
 input[type='file'] {
   background: var(--surface-2);
   border: 1px solid var(--border);

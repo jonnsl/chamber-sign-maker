@@ -3,8 +3,12 @@ import { ICON_IDS, isIconId, type IconId } from './atlas'
 /** Number of icon slots on the sign (matches the 10 icons in the atlas). */
 export const SLOT_COUNT = 10
 
-/** Chamber numbers are positive integers below 99, shown with 2 digits. */
-export const MIN_CHAMBER = 1
+/**
+ * Chamber numbers are integers below 99, shown with 2 digits. The current
+ * chamber may be 00 (Portal's first chamber); the total must be at least 01.
+ */
+export const MIN_CHAMBER = 0
+export const MIN_TOTAL = 1
 export const MAX_CHAMBER = 98
 
 export interface Slot {
@@ -31,9 +35,12 @@ export function padChamber(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-function isValidChamber(n: number): boolean {
-  return Number.isInteger(n) && n >= MIN_CHAMBER && n <= MAX_CHAMBER
+function inRange(n: number | null, min: number): n is number {
+  return n !== null && Number.isInteger(n) && n >= min && n <= MAX_CHAMBER
 }
+
+const rangeMessage = (min: number) =>
+  `Enter a whole number from ${padChamber(min)} to ${MAX_CHAMBER}.`
 
 /** Parse a user-typed chamber number; null unless it's 1-2 plain digits. */
 export function parseChamberInput(raw: string): number | null {
@@ -46,8 +53,6 @@ export type ChamberValidation =
   | { ok: true; current: number; total: number }
   | { ok: false; errors: { current?: string; total?: string } }
 
-const RANGE_MESSAGE = `Enter a whole number from ${padChamber(MIN_CHAMBER)} to ${MAX_CHAMBER}.`
-
 /** Validate the two number fields together (current must not exceed total). */
 export function validateChambers(
   currentRaw: string,
@@ -56,9 +61,8 @@ export function validateChambers(
   const current = parseChamberInput(currentRaw)
   const total = parseChamberInput(totalRaw)
   const errors: { current?: string; total?: string } = {}
-  if (current === null || !isValidChamber(current))
-    errors.current = RANGE_MESSAGE
-  if (total === null || !isValidChamber(total)) errors.total = RANGE_MESSAGE
+  if (!inRange(current, MIN_CHAMBER)) errors.current = rangeMessage(MIN_CHAMBER)
+  if (!inRange(total, MIN_TOTAL)) errors.total = rangeMessage(MIN_TOTAL)
   if (
     !errors.current &&
     !errors.total &&
