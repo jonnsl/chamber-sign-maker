@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { atlas } from './atlas'
-import { AtlasCrop } from './components/AtlasCrop'
+import { Editor } from './components/Editor'
 import { SetupScreen } from './components/SetupScreen'
 import { loadTexturesAutomatically } from './textures/load'
 import { TexturesContext } from './textures/TexturesContext'
@@ -9,7 +8,7 @@ import type { Textures } from './textures/types'
 type TextureState =
   | { status: 'loading' }
   | { status: 'missing' }
-  | { status: 'ready'; textures: Textures }
+  | { status: 'ready'; textures: Textures; changing: boolean }
 
 export default function App() {
   const [state, setState] = useState<TextureState>({ status: 'loading' })
@@ -20,7 +19,7 @@ export default function App() {
       if (cancelled) return
       setState(
         result
-          ? { status: 'ready', textures: result.textures }
+          ? { status: 'ready', textures: result.textures, changing: false }
           : { status: 'missing' },
       )
     })
@@ -28,6 +27,9 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  const ready = (textures: Textures) =>
+    setState({ status: 'ready', textures, changing: false })
 
   if (state.status === 'loading') {
     return (
@@ -37,18 +39,19 @@ export default function App() {
     )
   }
   if (state.status === 'missing') {
+    return <SetupScreen onReady={ready} />
+  }
+  if (state.changing) {
     return (
       <SetupScreen
-        onReady={(textures) => setState({ status: 'ready', textures })}
+        onReady={ready}
+        onCancel={() => setState({ ...state, changing: false })}
       />
     )
   }
   return (
     <TexturesContext.Provider value={state.textures}>
-      <main>
-        <h1>Chamber Sign Maker</h1>
-        <AtlasCrop region={atlas.logo} size={48} />
-      </main>
+      <Editor onChangeTextures={() => setState({ ...state, changing: true })} />
     </TexturesContext.Provider>
   )
 }
