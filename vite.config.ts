@@ -42,7 +42,11 @@ function gameTexturesDevServer(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? (process.env.VITE_BASE ?? `/${repoName}/`) : '/',
+// `vite preview` uses the same base as the build so it mirrors GitHub Pages.
+export default defineConfig(({ command, isPreview }) => ({
+  base:
+    command === 'build' || isPreview
+      ? (process.env.VITE_BASE ?? `/${repoName}/`)
+      : '/',
   plugins: [react(), gameTexturesDevServer()],
 }))
