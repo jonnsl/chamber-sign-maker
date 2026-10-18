@@ -9,6 +9,9 @@ All artwork is drawn from the game's own sign texture, which **you supply
 from your own copy of Portal**. This repository contains no game assets,
 only the coordinates of each element inside the texture.
 
+**Live demo: <https://jonnsl.github.io/chamber-sign-maker>** (you'll be asked
+for the texture files on first visit; they never leave your browser).
+
 ![Screenshot of Chamber Sign Maker](docs/screenshot.png)
 
 > _Screenshot placeholder: add `docs/screenshot.png`. Because the sign is
