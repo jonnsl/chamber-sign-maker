@@ -14,10 +14,6 @@ for the texture files on first visit; they never leave your browser).
 
 ![Screenshot of Chamber Sign Maker](docs/screenshot.png)
 
-> _Screenshot placeholder: add `docs/screenshot.png`. Because the sign is
-> rendered from Valve's artwork, think twice before committing a screenshot
-> of it._
-
 ## Features
 
 - Chamber number and total (`04 / 19`) as number inputs, validated
