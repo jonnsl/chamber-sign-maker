@@ -376,3 +376,102 @@ legend {
   font-size: 0.85rem;
   padding: 2rem 0;
 }
+
+/* Icon picker */
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.picker {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(36rem, 100%);
+  max-height: min(42rem, 100%);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 0.6);
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.picker-header h2 {
+  margin: 0;
+}
+
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+}
+
+.picker-list:focus-visible {
+  outline-offset: -3px;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.picker-option.is-active {
+  background: var(--surface-2);
+  border-color: var(--focus);
+}
+
+.picker-option[aria-selected='true'] .picker-name {
+  color: var(--accent);
+}
+
+.picker-thumb {
+  flex: none;
+  line-height: 0;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.picker-thumb .slot-empty {
+  width: 48px;
+  height: 48px;
+  display: block;
+  background: var(--surface);
+}
+
+.picker-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.picker-name {
+  font-weight: 600;
+}
+
+.picker-current {
+  font-weight: 400;
+}
+
+.picker-desc {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}

@@ -1,9 +1,10 @@
-import { useEffect, useId, useReducer } from 'react'
+import { useEffect, useId, useReducer, useRef, useState } from 'react'
 import { loadInitialState, saveState } from '../persistence'
 import { useSettings } from '../settings'
 import { parseState, signReducer } from '../state'
 import { useTextures } from '../textures/TexturesContext'
 import { ChamberFields } from './ChamberFields'
+import { IconPicker } from './IconPicker'
 import { IconSlot } from './IconSlot'
 import { SignPreview } from './SignPreview'
 
@@ -17,7 +18,17 @@ export function Editor({ onChangeTextures }: Props) {
   const [sign, dispatch] = useReducer(signReducer, undefined, loadInitialState)
   const [settings, updateSettings] = useSettings()
 
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null)
+  const slotButtons = useRef<Array<HTMLButtonElement | null>>([])
+
   useEffect(() => saveState(sign), [sign])
+
+  const closePicker = () => {
+    const slot = pickerSlot
+    setPickerSlot(null)
+    // Return focus to the slot that opened the picker.
+    if (slot !== null) slotButtons.current[slot]?.focus()
+  }
 
   // Pasting a share link into the address bar of an open tab.
   useEffect(() => {
@@ -69,7 +80,10 @@ export function Editor({ onChangeTextures }: Props) {
                   key={i}
                   index={i}
                   slot={slot}
-                  onOpenPicker={() => {}}
+                  onOpenPicker={() => setPickerSlot(i)}
+                  pickerButtonRef={(el) => {
+                    slotButtons.current[i] = el
+                  }}
                   onToggleActive={() =>
                     dispatch({ type: 'toggleActive', slot: i })
                   }
@@ -131,6 +145,18 @@ export function Editor({ onChangeTextures }: Props) {
           </fieldset>
         </section>
       </main>
+
+      {pickerSlot !== null && (
+        <IconPicker
+          slotIndex={pickerSlot}
+          value={sign.slots[pickerSlot]?.icon ?? null}
+          onSelect={(icon) => {
+            dispatch({ type: 'setIcon', slot: pickerSlot, icon })
+            closePicker()
+          }}
+          onClose={closePicker}
+        />
+      )}
 
       <footer className="app-footer">
         <p>
