@@ -1,0 +1,25 @@
+# Dependencies & build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.vite/
+
+# Game textures: user-provided, NEVER commit (anywhere in the tree)
+awe_total.png
+awe_total_grey.png
+**/awe_total*.png
+*.vtf
+*.vpk
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
