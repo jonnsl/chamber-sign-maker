@@ -475,3 +475,26 @@ legend {
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
+/* Export */
+.scale-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.scale-options .label {
+  font-weight: 500;
+  flex-basis: 100%;
+}
+
+.scale-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.scale-option input {
+  accent-color: var(--accent);
+}

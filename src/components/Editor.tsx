@@ -4,6 +4,7 @@ import { useSettings } from '../settings'
 import { parseState, signReducer } from '../state'
 import { useTextures } from '../textures/TexturesContext'
 import { ChamberFields } from './ChamberFields'
+import { ExportPanel } from './ExportPanel'
 import { IconPicker } from './IconPicker'
 import { IconSlot } from './IconSlot'
 import { SignPreview } from './SignPreview'
@@ -143,6 +144,14 @@ export function Editor({ onChangeTextures }: Props) {
               </div>
             )}
           </fieldset>
+
+          <ExportPanel
+            sign={sign}
+            scale={settings.exportScale}
+            onScaleChange={(exportScale) => updateSettings({ exportScale })}
+            background={background}
+            inactiveStyle={inactiveStyle}
+          />
         </section>
       </main>
 
