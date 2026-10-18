@@ -106,8 +106,8 @@ export interface Atlas {
   readonly smallDigits: DigitTable
   /** "/" separator, taken from the pre-printed "/19" at the top. */
   readonly slash: AtlasRect
-  /** One vertical progress bar (the texture has four identical ones). */
-  readonly progressTick: AtlasRect
+  /** Block of four vertical bars; the sign shows one per chamber reached. */
+  readonly progressBars: AtlasRect
   /** "APERTURE LABORATORIES" logo, stored rotated. */
   readonly logo: AtlasRect
 }
@@ -153,7 +153,7 @@ export const atlas: Atlas = {
     rect(1986, 342, 52, 78),
   ],
   slash: rect(1385, 10, 33, 79),
-  progressTick: rect(1619, 4, 16, 140),
+  progressBars: rect(1619, 4, 65, 140),
   logo: rect(1896, 430, 152, 593, 90),
 }
 
@@ -173,7 +173,7 @@ export function atlasEntries(): Array<[string, AtlasRect]> {
       r,
     ]),
     ['slash', atlas.slash],
-    ['progressTick', atlas.progressTick],
+    ['progressBars', atlas.progressBars],
     ['logo', atlas.logo],
   ]
 }

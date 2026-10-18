@@ -25,24 +25,48 @@ describe('layoutSign', () => {
     ])
   })
 
-  it('draws one progress tick per chamber, lit up to the current one', () => {
-    const { ops } = layoutSign({ ...DEFAULT_STATE, current: 7, total: 12 })
-    const ticks = regionOps(ops).filter(
-      (op) => op.region === atlas.progressTick,
+  it('matches the in-game proportions', () => {
+    const layout = layoutSign({ ...DEFAULT_STATE, current: 2, total: 19 })
+    expect([layout.width, layout.height]).toEqual([471, 952])
+    expect(layout.ops.filter((op) => op.kind === 'rule')).toHaveLength(2)
+
+    // Icons: two rows of five, sharing the rules' left edge.
+    const icons = regionOps(layout.ops).filter((op) =>
+      Object.values(atlas.icons).includes(op.region),
     )
-    expect(ticks).toHaveLength(12)
-    expect(ticks.filter((t) => t.lit)).toHaveLength(7)
+    expect(new Set(icons.map((op) => Math.round(op.y))).size).toBe(2)
+    expect(new Set(icons.map((op) => Math.round(op.x))).size).toBe(5)
   })
 
-  it('renders chamber 00 with the sideways big zero and no lit ticks', () => {
+  it('draws one 4-bar progress block per chamber reached', () => {
+    const blocks = (current: number, total: number) =>
+      regionOps(layoutSign({ ...DEFAULT_STATE, current, total }).ops).filter(
+        (op) => op.region === atlas.progressBars,
+      )
+    expect(blocks(2, 19)).toHaveLength(2)
+    expect(blocks(7, 12)).toHaveLength(7)
+    // Block size only shrinks when `total` blocks wouldn't fit.
+    expect(blocks(1, 18)[0]!.width).toBe(blocks(1, 12)[0]!.width)
+    expect(blocks(1, 19)[0]!.width).toBeLessThan(blocks(1, 18)[0]!.width)
+    // A full bar ends flush with the rules.
+    const full = blocks(98, 98)
+    const rule = layoutSign({ ...DEFAULT_STATE, total: 98 }).ops.find(
+      (op) => op.kind === 'rule',
+    )!
+    const last = full.at(-1)!
+    expect(last.x + last.width).toBeCloseTo(rule.x + rule.width, 0)
+  })
+
+  it('renders chamber 00 with the sideways big zero and no progress', () => {
     const { ops } = layoutSign({ ...DEFAULT_STATE, current: 0, total: 19 })
     const regions = regionOps(ops)
     expect(regions.slice(0, 2).map((op) => op.region)).toEqual([
       atlas.bigDigits[0],
       atlas.bigDigits[0],
     ])
-    const ticks = regions.filter((op) => op.region === atlas.progressTick)
-    expect(ticks.filter((t) => t.lit)).toHaveLength(0)
+    expect(
+      regions.filter((op) => op.region === atlas.progressBars),
+    ).toHaveLength(0)
   })
 
   it('keeps every element inside the sign, even with 98 chambers', () => {
@@ -113,9 +137,13 @@ describe('paintSign', () => {
   })
 
   it('fills a solid background and only outlines placeholders on request', () => {
+    const layout = layoutSign(state)
+    const fullCanvas = [0, 0, layout.width * 2, layout.height * 2]
     const ctx = createMockContext()
-    paintSign(ctx, layoutSign(state), textures, base)
-    expect(ctx.fillRect).not.toHaveBeenCalled()
+    paintSign(ctx, layout, textures, base)
+    // Only the two rules are filled; no background.
+    expect(ctx.fillRect).toHaveBeenCalledTimes(2)
+    expect(ctx.fillRect).not.toHaveBeenCalledWith(...fullCanvas)
     expect(ctx.strokeRect).not.toHaveBeenCalled()
 
     const ctx2 = createMockContext()
@@ -124,7 +152,8 @@ describe('paintSign', () => {
       background: '#ffffff',
       showPlaceholders: true,
     })
-    expect(ctx2.fillRect).toHaveBeenCalledTimes(1)
+    expect(ctx2.fillRect).toHaveBeenNthCalledWith(1, ...fullCanvas)
+    expect(ctx2.fillRect).toHaveBeenCalledTimes(3)
     expect(ctx2.strokeRect).toHaveBeenCalledTimes(9)
   })
 })

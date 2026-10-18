@@ -25,9 +25,9 @@ only the coordinates of each element inside the texture.
   opacity, or optionally drawn with the game's own unlit texture).
 - Keyboard-accessible icon picker: thumbnails cropped from the texture, plus
   each icon's name and description.
-- Live canvas preview. The PNG export uses the same rendering code at 1×–4×,
-  with a solid or transparent background, saved as e.g.
-  `chamber-04-of-19.png`.
+- Live canvas preview. The PNG export uses the same rendering code at 1×–4×
+  (471×952 up to 1884×3808), with a solid or transparent background, saved
+  as e.g. `chamber-04-of-19.png`.
 - State is saved to `localStorage` and the URL hash, so a link reproduces a
   sign exactly.
 - Fully static, client-side only. Textures are never uploaded.
@@ -146,8 +146,8 @@ compression. That means:
 - `awe_total.png` is required. It provides every lit element, and the
   inactive look via 25% opacity.
 - `awe_total_grey.png` is optional. Under _Appearance → Inactive icons_ you
-  can draw inactive icons and future progress ticks with the game's own
-  unlit texture (≈14%) instead of 25% opacity.
+  can draw inactive icons with the game's own unlit texture (≈14%)
+  instead of 25% opacity.
 
 Since the artwork is black on transparent, signs are drawn over a light
 background (white by default). Choose _Transparent_ to export just the
@@ -164,7 +164,7 @@ rotation }` in the native 2048×1024 texture space:
 | `bigDigits`    | 0–9 for the large chamber number (~415 px tall)              |
 | `smallDigits`  | 0–9 for the `04/19` counter (~74 px tall, right-hand column) |
 | `slash`        | the `/`, taken from the pre-printed `/19`                    |
-| `progressTick` | one of the four identical vertical bars                      |
+| `progressBars` | the block of four vertical bars (one block per chamber)      |
 | `logo`         | the Aperture Laboratories logo                               |
 
 The rectangles came from a connected-component pass over the alpha channel,
@@ -218,11 +218,25 @@ Tests mock the canvas and textures, so CI never needs the game files.
 
 ## Assumptions
 
-- **Sign layout.** The texture contains the parts but not their arrangement.
-  The layout is a recreation: big number on top, then the `NN/MM` counter
-  with one progress tick per chamber (lit up to the current one), then the
-  icons in **two rows of five**, then the logo. Proportions live in
-  `src/render/layout.ts`.
+- **Sign layout** is measured from an in-game screenshot of the chamber 02
+  sign (471×952), and a 02/19 render matches it to about 1 px. From top to
+  bottom: the big number (centred), the `NN/MM` counter over a rule, the
+  progress bar, a second rule, the icons in **two rows of five**, then the
+  logo. The game draws the logo ~10% taller and the big digits ~1%
+  narrower than the texture's aspect ratio, and the layout does the same.
+  All measurements live in `src/render/layout.ts`.
+- **Progress bar:** one 4-bar block per chamber reached, tiled edge to
+  edge, with nothing for chamber 00 and no unlit remainder (the screenshot
+  shows none). Blocks keep their in-game size while `total` of them fit
+  under the rule, and otherwise shrink so a full bar ends flush with it.
+  At /19 that is 2.4% smaller than in-game, under 1 px of difference for
+  chamber 02.
+- **Rules:** the two horizontal lines aren't in the atlas, so they are
+  drawn as plain black rectangles. Everything else is cropped from the
+  texture.
+- **Lighting:** the in-game panel's colour (≈`#bdccd3`) and vignette come
+  from the game's lighting. The default background is white; pick a colour
+  under _Appearance_ to imitate the lit panel.
 - **Icon order and names** follow the community names for the ten
   Portal 1 icons. The texture packs them as 4 + 3 + 3; slots default to the
   in-game order (cube dispenser … cake).

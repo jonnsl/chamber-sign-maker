@@ -50,8 +50,8 @@ export function paintSign(
       ctx.save()
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)'
       ctx.lineWidth = Math.max(1, s)
-      ctx.setLineDash([4 * s, 4 * s])
-      const inset = 4 * s
+      ctx.setLineDash([3 * s, 3 * s])
+      const inset = 2 * s
       ctx.strokeRect(
         op.x * s + inset,
         op.y * s + inset,
@@ -59,6 +59,12 @@ export function paintSign(
         op.height * s - 2 * inset,
       )
       ctx.restore()
+      continue
+    }
+    if (op.kind === 'rule') {
+      // Same black as the texture artwork.
+      ctx.fillStyle = '#000'
+      ctx.fillRect(op.x * s, op.y * s, op.width * s, op.height * s)
       continue
     }
     const texture = !op.lit && useGrey ? textures.grey! : textures.lit

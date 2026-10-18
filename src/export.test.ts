@@ -47,6 +47,7 @@ describe('export', () => {
     expect(blob.type).toBe('image/png')
     expect(canvases[0]!.width).toBe(layoutSign(state).width * 2)
     expect(ctx.strokeRect).not.toHaveBeenCalled()
-    expect(ctx.fillRect).not.toHaveBeenCalled()
+    const { width, height } = layoutSign(state)
+    expect(ctx.fillRect).not.toHaveBeenCalledWith(0, 0, width * 2, height * 2)
   })
 })

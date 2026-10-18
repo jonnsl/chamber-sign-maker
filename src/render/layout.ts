@@ -2,57 +2,117 @@ import { atlas, uprightSize, type AtlasRect } from '../atlas'
 import { padChamber, type SignState } from '../state'
 
 /*
- * Sign layout in logical units (1x export = 1 unit per pixel):
+ * Sign layout in logical units (1x export = 1 unit per pixel), measured
+ * from an in-game screenshot of the chamber 02 sign (471x952). All "ink"
+ * values below are where the visible artwork sits; atlas regions carry
+ * PAD px of transparent padding, which is subtracted when placing them.
  *
- *   ┌──────────────────────────┐
- *   │ 04                       │  big chamber number
- *   │ 04/19 ||||||||||||||||   │  counter + one progress tick per chamber
- *   │ [] [] [] [] []           │  10 icon slots, 2 rows of 5
- *   │ [] [] [] [] []           │
- *   │ (O) APERTURE             │  logo
- *   └──────────────────────────┘
+ *   ┌────────────────────┐
+ *   │                    │
+ *   │        02          │  big number, centred
+ *   │                    │
+ *   │ 02/19              │  counter
+ *   │ ────────────────── │  rule
+ *   │ ||||||||           │  one 4-bar block per chamber reached
+ *   │                    │
+ *   │ ────────────────── │  rule
+ *   │ [] [] [] [] []     │  icons, 2 rows of 5
+ *   │ [] [] [] [] []     │
+ *   │                    │
+ *   │ (O)APERTURE        │  logo
+ *   └────────────────────┘
  */
-export const SIGN_WIDTH = 512
-const MARGIN = 36
-const CONTENT_WIDTH = SIGN_WIDTH - 2 * MARGIN
+export const SIGN_WIDTH = 471
+export const SIGN_HEIGHT = 952
 
-const BIG_HEIGHT = 300
-const BIG_NOMINAL = 422 // tallest big-digit region, so all share one scale
-const BIG_GAP = 16
+/** Transparent padding around every atlas region (see atlas.ts). */
+const PAD = 2
 
-const SMALL_HEIGHT = 36
-const SMALL_NOMINAL = 78
-const SMALL_GAP = 3
+/** Left/right edges shared by the rules, progress bar and icon grid. */
+const CONTENT_LEFT = 95
+const CONTENT_RIGHT = 455
 
-const TICK_GAP_FROM_COUNTER = 18
-const ICON_COLUMNS = 5
-const ICON_GAP = 8
-const ICON_SIZE = (CONTENT_WIDTH - (ICON_COLUMNS - 1) * ICON_GAP) / ICON_COLUMNS
-const LOGO_WIDTH = 220
-const SECTION_GAP = 28
+const BIG = {
+  inkTop: 97,
+  inkHeight: 339,
+  /** Ink height of the tallest big digit in the atlas. */
+  atlasInkHeight: 418,
+  /** The game draws the digits ~1% narrower than their native aspect. */
+  widthFactor: 0.99,
+  centerX: 233,
+  inkGap: 49,
+}
 
-/** Opacity used for inactive icons and remaining progress ticks. */
+const COUNTER = {
+  inkLeft: 104,
+  inkTop: 519,
+  inkHeight: 15,
+  atlasInkHeight: 74,
+  inkGap: 4,
+}
+
+const RULES = [
+  { y: 538.75, height: 1.25 },
+  { y: 670, height: 1.75 },
+]
+
+const PROGRESS = {
+  inkTop: 543,
+  inkHeight: 20,
+  /**
+   * The 65px atlas region spans exactly four bar periods, so blocks tile
+   * edge to edge into one evenly spaced row of bars (4.86px apart).
+   */
+  blockPitch: 19.43,
+  atlasInkHeight: 136,
+}
+
+const ICONS = {
+  columns: 5,
+  inkLeft: CONTENT_LEFT,
+  inkTop: 677,
+  /** Frame size on the sign, and the frame's size in the atlas. */
+  inkSize: 63.5,
+  atlasInkSize: 333,
+  columnPitch: 73.75,
+  rowPitch: 71,
+}
+
+const LOGO = {
+  inkLeft: 101,
+  inkWidth: 105,
+  /** Drawn ~10% taller than the texture's aspect ratio. */
+  inkHeight: 29.5,
+  centerY: 913.5,
+  atlasInkWidth: 589,
+  atlasInkHeight: 148,
+}
+
+/** Opacity used for inactive icons. */
 export const INACTIVE_OPACITY = 0.25
 
+interface Box {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export type DrawOp =
-  | {
+  | ({
       kind: 'region'
       region: AtlasRect
-      x: number
-      y: number
-      width: number
-      height: number
-      /** false = an unlit element (inactive icon, future progress tick). */
+      /** false = an unlit element (inactive icon). */
       lit: boolean
-    }
-  | {
+    } & Box)
+  | ({
       /** Empty icon slot; drawn only in the editor preview. */
       kind: 'placeholder'
-      x: number
-      y: number
-      width: number
-      height: number
-    }
+    } & Box)
+  | ({
+      /** Solid horizontal rule (not part of the atlas). */
+      kind: 'rule'
+    } & Box)
 
 export interface SignLayout {
   readonly width: number
@@ -60,33 +120,53 @@ export interface SignLayout {
   readonly ops: readonly DrawOp[]
 }
 
-/** Lay out a run of glyphs vertically centred on a line; returns end x. */
-function layoutGlyphs(
-  ops: DrawOp[],
+/** Upright box of a region drawn at the given scale, before positioning. */
+function scaledSize(region: AtlasRect, sx: number, sy = sx) {
+  const size = uprightSize(region)
+  return { width: size.width * sx, height: size.height * sy }
+}
+
+/**
+ * Lay out a run of glyphs left to right, vertically centred on centerY,
+ * with inkGap between the visible ink of neighbouring glyphs.
+ */
+function layoutRun(
   glyphs: readonly AtlasRect[],
-  x: number,
-  top: number,
-  lineHeight: number,
+  inkLeft: number,
+  centerY: number,
   scale: number,
-  gap: number,
-): number {
-  let cursor = x
-  glyphs.forEach((region, i) => {
-    const size = uprightSize(region)
-    const width = size.width * scale
-    const height = size.height * scale
-    ops.push({
+  inkGap: number,
+  scaleX = scale,
+): DrawOp[] {
+  const pad = PAD * scaleX
+  let x = inkLeft - pad
+  return glyphs.map((region) => {
+    const { width, height } = scaledSize(region, scaleX, scale)
+    const op: DrawOp = {
       kind: 'region',
       region,
-      x: cursor,
-      y: top + (lineHeight - height) / 2,
+      x,
+      y: centerY - height / 2,
       width,
       height,
       lit: true,
-    })
-    cursor += width + (i < glyphs.length - 1 ? gap : 0)
+    }
+    x += width - 2 * pad + inkGap
+    return op
   })
-  return cursor
+}
+
+/** Total ink width of a run laid out by layoutRun(). */
+function runInkWidth(
+  glyphs: readonly AtlasRect[],
+  scaleX: number,
+  inkGap: number,
+): number {
+  const pad = PAD * scaleX
+  return (
+    glyphs.reduce((sum, r) => sum + scaledSize(r, scaleX).width - 2 * pad, 0) +
+    inkGap * (glyphs.length - 1)
+  )
 }
 
 function digitsOf(n: number, table: readonly AtlasRect[]): AtlasRect[] {
@@ -96,67 +176,80 @@ function digitsOf(n: number, table: readonly AtlasRect[]): AtlasRect[] {
 /** Pure layout: turns sign state into positioned draw operations. */
 export function layoutSign(state: SignState): SignLayout {
   const ops: DrawOp[] = []
-  let y = MARGIN
 
-  // Big chamber number.
-  layoutGlyphs(
-    ops,
-    digitsOf(state.current, atlas.bigDigits),
-    MARGIN,
-    y,
-    BIG_HEIGHT,
-    BIG_HEIGHT / BIG_NOMINAL,
-    BIG_GAP,
-  )
-  y += BIG_HEIGHT + SECTION_GAP
-
-  // "04/19" counter.
-  const counterEnd = layoutGlyphs(
-    ops,
-    [
-      ...digitsOf(state.current, atlas.smallDigits),
-      atlas.slash,
-      ...digitsOf(state.total, atlas.smallDigits),
-    ],
-    MARGIN,
-    y,
-    SMALL_HEIGHT,
-    SMALL_HEIGHT / SMALL_NOMINAL,
-    SMALL_GAP,
+  // Big chamber number, centred horizontally.
+  const bigDigits = digitsOf(state.current, atlas.bigDigits)
+  const bigScale = BIG.inkHeight / BIG.atlasInkHeight
+  const bigScaleX = bigScale * BIG.widthFactor
+  ops.push(
+    ...layoutRun(
+      bigDigits,
+      BIG.centerX - runInkWidth(bigDigits, bigScaleX, BIG.inkGap) / 2,
+      BIG.inkTop + BIG.inkHeight / 2,
+      bigScale,
+      BIG.inkGap,
+      bigScaleX,
+    ),
   )
 
-  // Progress ticks: one per chamber, lit up to the current one. They share
-  // the remaining width and shrink (never grow) to fit up to 98 chambers.
-  const tick = uprightSize(atlas.progressTick)
-  const tickScale = SMALL_HEIGHT / tick.height
-  const naturalWidth = tick.width * tickScale
-  const tickStart = counterEnd + TICK_GAP_FROM_COUNTER
-  const pitch = Math.min(
-    naturalWidth * 2,
-    (MARGIN + CONTENT_WIDTH - tickStart) / state.total,
+  // "02/19" counter above the first rule.
+  ops.push(
+    ...layoutRun(
+      [
+        ...digitsOf(state.current, atlas.smallDigits),
+        atlas.slash,
+        ...digitsOf(state.total, atlas.smallDigits),
+      ],
+      COUNTER.inkLeft,
+      COUNTER.inkTop + COUNTER.inkHeight / 2,
+      COUNTER.inkHeight / COUNTER.atlasInkHeight,
+      COUNTER.inkGap,
+    ),
   )
-  const tickWidth = Math.min(naturalWidth, pitch * 0.6)
-  for (let i = 0; i < state.total; i++) {
+
+  for (const rule of RULES) {
     ops.push({
-      kind: 'region',
-      region: atlas.progressTick,
-      x: tickStart + i * pitch,
-      y,
-      width: tickWidth,
-      height: SMALL_HEIGHT,
-      lit: i < state.current,
+      kind: 'rule',
+      x: CONTENT_LEFT,
+      y: rule.y,
+      width: CONTENT_RIGHT - CONTENT_LEFT,
+      height: rule.height,
     })
   }
-  y += SMALL_HEIGHT + SECTION_GAP
+
+  // Progress: one 4-bar block per chamber reached (none for chamber 00).
+  // Blocks keep the in-game size while `total` of them fit under the rule
+  // (18 chambers), then squeeze so a full bar ends flush with the rule.
+  const fit = Math.min(
+    1,
+    (CONTENT_RIGHT - CONTENT_LEFT) / (state.total * PROGRESS.blockPitch),
+  )
+  const pitch = PROGRESS.blockPitch * fit
+  const bx = pitch / atlas.progressBars.width
+  const by = PROGRESS.inkHeight / PROGRESS.atlasInkHeight
+  const block = scaledSize(atlas.progressBars, bx, by)
+  for (let i = 0; i < state.current; i++) {
+    ops.push({
+      kind: 'region',
+      region: atlas.progressBars,
+      // Offset so the first bar's ink starts on the rule's left edge.
+      x: CONTENT_LEFT + i * pitch - PAD * bx,
+      y: PROGRESS.inkTop - PAD * by,
+      ...block,
+      lit: true,
+    })
+  }
 
   // Icon grid.
-  const rows = Math.ceil(state.slots.length / ICON_COLUMNS)
+  const iconScale = ICONS.inkSize / ICONS.atlasInkSize
   state.slots.forEach((slot, i) => {
-    const box = {
-      x: MARGIN + (i % ICON_COLUMNS) * (ICON_SIZE + ICON_GAP),
-      y: y + Math.floor(i / ICON_COLUMNS) * (ICON_SIZE + ICON_GAP),
-      width: ICON_SIZE,
-      height: ICON_SIZE,
+    const pad = PAD * iconScale
+    const size = ICONS.inkSize + 2 * pad
+    const box: Box = {
+      x: ICONS.inkLeft + (i % ICONS.columns) * ICONS.columnPitch - pad,
+      y: ICONS.inkTop + Math.floor(i / ICONS.columns) * ICONS.rowPitch - pad,
+      width: size,
+      height: size,
     }
     ops.push(
       slot.icon === null
@@ -169,21 +262,19 @@ export function layoutSign(state: SignState): SignLayout {
           },
     )
   })
-  y += rows * ICON_SIZE + (rows - 1) * ICON_GAP + SECTION_GAP
 
   // Aperture Laboratories logo.
-  const logo = uprightSize(atlas.logo)
-  const logoHeight = (LOGO_WIDTH * logo.height) / logo.width
+  const logoScaleX = LOGO.inkWidth / LOGO.atlasInkWidth
+  const logoScaleY = LOGO.inkHeight / LOGO.atlasInkHeight
+  const logo = scaledSize(atlas.logo, logoScaleX, logoScaleY)
   ops.push({
     kind: 'region',
     region: atlas.logo,
-    x: MARGIN,
-    y,
-    width: LOGO_WIDTH,
-    height: logoHeight,
+    x: LOGO.inkLeft - PAD * logoScaleX,
+    y: LOGO.centerY - logo.height / 2,
+    ...logo,
     lit: true,
   })
-  y += logoHeight + MARGIN
 
-  return { width: SIGN_WIDTH, height: Math.ceil(y), ops }
+  return { width: SIGN_WIDTH, height: SIGN_HEIGHT, ops }
 }
